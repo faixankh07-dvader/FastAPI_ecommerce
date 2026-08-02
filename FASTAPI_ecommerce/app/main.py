@@ -1,14 +1,32 @@
-from fastapi import FastAPI, HTTPException, Query, Path
-from services.products import get_all_products, add_product, remove_product, change_product
+from dotenv import load_dotenv
+import os
+from fastapi import FastAPI, HTTPException, Query, Path, Depends, Request
+from fastapi.responses import JSONResponse
+from services.products import (get_all_products, add_product, remove_product, change_product, load_products)
 from schema.product import Product, ProductUpdate
 from uuid import uuid4, UUID
 from datetime import datetime
+from typing import List, Dict
 
+load_dotenv()
 app = FastAPI()
 
-@app.get("/")
-def root():
-    return {"message": "Welcome to the FastAPI e-commerce application!"}
+
+def common_logic():
+    return "Hello There"
+
+@app.get("/", response_model=dict)
+def root(dep=Depends(common_logic)):
+    DB_PATH = os.getenv("BASE_URL")
+    #return {"message": "Welcomne to FastAPI.","dependency": dep,"data_path": DB_PATH}
+    return JSONResponse(
+        status_code=200,
+        content={
+            "message": "Welcomne to FastAPI.",
+            "dependency": dep,
+            "data_path": DB_PATH,
+        },
+    )
 
 '''
 @app.get("/products")
@@ -16,8 +34,9 @@ def get_products():
     return get_all_products()
 '''
 
-@app.get("/products")
+@app.get("/products", response_model=dict)
 def list_products(
+    dep=Depends(load_products),
     name: str = Query(
         default=None,
         min_length=1,
@@ -42,7 +61,7 @@ def list_products(
 ):
 
     # products = get_all_products()
-    products = get_all_products()
+    products = dep
     
     if name:
         needle = name.strip().lower()
